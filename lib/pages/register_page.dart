@@ -3,7 +3,8 @@ import 'package:socia_media_app/components/button.dart';
 import 'package:socia_media_app/components/text_field.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  final Function()? onTap;
+  const RegisterPage({super.key,  required this. onTap});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -14,6 +15,36 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordTextController = TextEditingController();
   final confirmPasswordTextController = TextEditingController();
 
+// sign user up
+void signUp() async {
+
+  // show loading circle
+  showDialog(
+    context: context, 
+    builder: (context) => const Center(
+      child: CircularProgressIndicator(),
+  ),
+  );
+
+  // make sure passwords match
+  if (passwordTextController.text != confirmPasswordTextController.text) {
+    //pop loading circle
+    Navigator.pop(context);
+    //show error to user
+    displayMessage("Passwords don't match");
+    return;
+  }
+
+  //try creating the user
+  try {
+    await FirebaseAuth.instance.createUserWithEmailAndPassword(email: emailTextController, password: passwordTextController);
+  } on FirebaseAuthException cath (e) {
+    //pop loading circle
+    Navigator.pop(context);
+    //show error to user
+    displayMessage(e.code);
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,8 +82,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 25),
 
-                //sing in button
-                MyButton(onTap: (){}, text: 'Sing In'),
+                //sing up button
+                MyButton(onTap: signUp, text: 'Sing In'),
                 const SizedBox(height: 25),
 
 
@@ -66,7 +97,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),),
                     const SizedBox(width: 4),
                     GestureDetector(
-                      onTap: (){},
+                      onTap: widget.onTap,
                       child: const Text("Login now", style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,

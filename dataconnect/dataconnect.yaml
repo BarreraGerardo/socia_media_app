@@ -1,0 +1,12 @@
+specVersion: "v1beta"
+serviceId: "socia_media_app"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "socia_media_app-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

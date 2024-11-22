@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:socia_media_app/pages/login_page.dart';
+import 'package:socia_media_app/auth/auth.dart';
 
-void main() {
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 class MyApp extends StatelessWidget {
@@ -12,7 +18,7 @@ class MyApp extends StatelessWidget {
 Widget build(BuildContext context) {
   return const MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: LoginPage(),
+    home: AuthPage(),
   );
  }
 }

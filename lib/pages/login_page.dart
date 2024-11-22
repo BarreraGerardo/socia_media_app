@@ -4,7 +4,8 @@ import 'package:socia_media_app/components/text_field.dart';
 
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final Function()? onTap;
+  const LoginPage({super.key, required this.onTap});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -15,7 +16,41 @@ class _LoginPageState extends State<LoginPage> {
   final emailTextController = TextEditingController();
   final passwordTextController = TextEditingController();
 
+//sign user in
+void signIn() async{
+  // show loading circle
+  showDialog(
+    context: context, 
+    builder: (context) => const Center(
+      child:CircularProgressIndicator(),
+      ),
+      );
 
+  // try sign in
+  try { 
+  await FirebaseAuth.instance.signInWithEmailAndPassword(
+    email: emailTextController.text, 
+    password: passwordTextController.text,
+    );
+
+    // pop loading circle
+    if (context.mounted) Navigator.pop(context);
+  }on FirebaseAuthException catch (e) {
+    // pop loading circle
+    Navigator.pop(context);
+    //display error message
+    
+    displayMessage(e.code);
+  }
+}
+
+//display a dialog message
+void displayMessage(String message) {
+  showDialog(context: context, builder: (context) => AlertDialog(
+    title: Text(message),
+  ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 10),
 
                 //sing in button
-                MyButton(onTap: (){}, text: 'Sing In'),
+                MyButton(onTap: singIn, text: 'Sing In'),
                 const SizedBox(height: 25),
 
 
@@ -64,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),),
                     const SizedBox(width: 4),
                     GestureDetector(
-                      onTap: (){},
+                      onTap: widget.onTap,
                       child: const Text("Register now!", style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
