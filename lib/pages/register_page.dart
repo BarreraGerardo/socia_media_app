@@ -37,8 +37,14 @@ void signUp() async {
 
   //try creating the user
   try {
-    await FirebaseAuth.instance.createUserWithEmailAndPassword(email: emailTextController, password: passwordTextController);
-  } on FirebaseAuthException cath (e) {
+    await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: emailTextController,
+     password: passwordTextController
+     );
+
+     //pop loading circle
+     if (context.mounted) Navigator.pop(context);
+  } on FirebaseAuthException catch (e) {
     //pop loading circle
     Navigator.pop(context);
     //show error to user
