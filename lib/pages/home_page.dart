@@ -39,7 +39,6 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("The Wall"),
-        backgroundColor: Colors.grey[900],
         actions: [
           IconButton(
             onPressed: signOut, // Botón de cerrar sesión

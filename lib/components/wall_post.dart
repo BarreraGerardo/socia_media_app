@@ -129,6 +129,55 @@ class _WallPostState extends State<WallPost> {
       ),
     );
   }
+  //delete a post
+  void deletePost() {
+    // show a dialog box asking for confirmation before deleting the post
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title:const Text("Delete Post"),
+        content: const Text("Are you sure you want to delete this post?"),
+        actions: [
+          //Cancel Button
+          TextButton(onPressed: () => Navigator.pop(context), 
+          child: const Text("Cancel"),
+          ),
+          //Delete Button
+          TextButton(onPressed: () async {
+            //delete the coments from firestore first 
+            //(if you only delete the post, the coments will still be stared in firestore)
+            final commentDocs = await FirebaseFirestare.instance
+            .collection("User Post")
+            .doc(widget.postId)
+            .collection("Comments")
+            .get();
+
+            for (var doc in commentDocs) {
+              await FirebaseFirestore.instance
+              .collection("User Posts")
+              .doc(widget.postId)
+              .collection("Comments")
+              .doc(doc.id)
+              .delete();
+            }
+            //then delete the post
+            FirebaseFirestore.instance
+            .collection("User Posts")
+            .doc(widget.postId)
+            .delete()
+            .thes((value) => print("post deleted"))
+            .catchError(
+              (error) => print("failed to delete post: $error"));
+
+              //dismiss the dialog
+              Navigator.pop(context);
+          }, 
+          child: const Text("Delete"),
+          ),
+        ]
+      ),
+      );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,15 +192,25 @@ class _WallPostState extends State<WallPost> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Mensaje del post
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(widget.message),
-              const SizedBox(height: 5),
-              Text(
-                widget.user,
-                style: TextStyle(color: Colors.grey[500]),
+              // group of text (message + user email)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.message),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.user,
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                ],
               ),
+              //delete button
+              if(widget.user == currentUser.email)
+              DeleteButton(onTap: deletePost),
             ],
           ),
           const SizedBox(height: 20),
