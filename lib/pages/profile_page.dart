@@ -1,140 +1,162 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:socia_media_app/components/text_field.dart';
 
+/// Página de perfil del usuario.
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  //user
-  final currentUser = FirebaseAuth.instance.currentUser!;
-  // all users
-  final usersCollection = FirebaseFirestore.instance.collection("Users");
+  // Variables para almacenar los datos del usuario
+  String? username;
+  String? email;
+  String? bio;
 
-  Future<void> editField(String field) async{
-    String newValue = "";
-    await showAdaptiveDialog(
-      context: context,
-     builder: (context) => AlertDialog(
-      backgroundColor: Colors.grey[900],
-      title: Text(
-        "Edit $field",
-        style: const TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          autofocus: true,
-          style: TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: "Enter new $field",
-            hintStyle: TextStyle(color: Colors.grey)
-          ),
-          onChanged: (value) {
-            newValue = value;
-          },
-        ),
-        actions: [
-          //cancel button
-          TextButton(
-            child: Text('Cancel',
-            style: TextStyle(color: Colors.white),
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
+  // Controladores para los campos de texto
+  final usernameController = TextEditingController();
+  final bioController = TextEditingController();
 
-          //save button
-          TextButton(
-            child: Text('Save',
-            style: TextStyle(color: Colors.white),
-            ),
-            onPressed: () => Navigator.of(context).pop(newValue),
-          ),
+  @override
+  void initState() {
+    super.initState();
+    // Cargar datos del usuario cuando se inicia la página
+    loadUserData();
+  }
 
-        ],
-     ),
-     );
+  /// Carga los datos del usuario desde Firebase Auth y Firestore.
+  Future<void> loadUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
 
-     //update in firestore
-     if (newValue.trim().length > 0){
-      //only update if there is something in the textfield
-      await usersCollection.doc(currentUser.email).update({field : newValue});
+    if (user != null) {
+      setState(() {
+        email = user.email; // Asignar email directamente desde Firebase Auth.
+      });
 
+      // Cargar datos adicionales desde Firestore.
+      DocumentSnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
-     }
+      if (snapshot.exists) {
+        setState(() {
+          username = snapshot['username'] ?? 'No username set'; // Obtener username.
+          bio = snapshot['bio'] ?? 'No bio available'; // Obtener bio.
+        });
+      } else {
+        // Si no hay datos en Firestore, establecer valores por defecto.
+        setState(() {
+          username = 'No username set';
+          bio = 'No bio available';
+        });
+      }
+    }
+  }
 
+  /// Actualiza el username y bio del usuario en Firestore.
+  Future<void> updateUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(
+        {
+          'username': usernameController.text,
+          'bio': bioController.text,
+        },
+        SetOptions(merge: true), // Combinar con los datos existentes en Firestore.
+      );
+
+      // Recargar los datos del usuario.
+      loadUserData();
+    }
+  }
+
+  /// Elimina la bio del usuario en Firestore.
+  Future<void> deleteBio() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'bio': FieldValue.delete(), // Eliminar la bio.
+      });
+
+      // Recargar los datos del usuario.
+      loadUserData();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: Text('PROFILE PAGE'),
+      appBar: AppBar(
+        title: const Text('Profile'), // Título de la página.
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-        .collection("Users")
-        .doc(currentUser.email)
-        .snapshots(),
-        builder: (context, snapshot) {
-          //get user data
-          if (snapshot.hasData){
-            final userData = snapshot.data!.data() as Map<String, dynamic>;
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Mostrar el email del usuario.
+            Text('Email: $email', style: const TextStyle(fontSize: 18)),
 
-            return ListView(
-        children: [
-          const SizedBox(height: 50),
-          // porfile pic
-          Icon(Icons.person, size: 72,),
+            const SizedBox(height: 20),
 
-          //user email
-          Text(currentUser.email!,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Colors.grey[700]
-          ),
-          ),
-          const SizedBox(height: 10),
+            // Mostrar el username.
+            Text('Username: $username', style: const TextStyle(fontSize: 18)),
 
-          //user details
-          Padding(
-            padding: const EdgeInsets.only(left: 25.0),
-            child: Text('My details', 
-            style: TextStyle(color: Colors.grey[600]),),
-          ),
+            const SizedBox(height: 20),
 
-          //username
-           MyTextBox(text: userData['username'], 
-           sectionName: 'User name',
-           onPressed: () => editField('username'),),
+            // Mostrar la bio.
+            Text('Bio: $bio', style: const TextStyle(fontSize: 18)),
 
-          //bio
-          MyTextBox(text: userData['bio'], 
-           sectionName: 'bio',
-           onPressed: () => editField('bio'),),
+            const SizedBox(height: 20),
 
-           const SizedBox(height: 50),
+            // Campo para actualizar el username.
+            TextField(
+              controller: usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Update Username',
+              ),
+            ),
 
-          //user posts
-          Padding(
-            padding: const EdgeInsets.only(left: 25.0),
-            child: Text('My posts', 
-            style: TextStyle(color: Colors.grey[600]),),
-          ),
+            const SizedBox(height: 10),
 
-        ],
-      );
+            // Campo para actualizar la bio.
+            TextField(
+              controller: bioController,
+              decoration: const InputDecoration(
+                labelText: 'Update Bio',
+              ),
+            ),
 
-          }else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error${snapshot.error}'),
-            );
-          }
-          return const Center(child: CircularProgressIndicator(),);
-        },)
+            const SizedBox(height: 20),
+
+            // Botón para actualizar la información del usuario.
+            ElevatedButton(
+              onPressed: updateUserData,
+              child: const Text('Update Info'),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Botón para borrar la bio.
+            ElevatedButton(
+              onPressed: deleteBio,
+              child: const Text('Delete Bio'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

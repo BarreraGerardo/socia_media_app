@@ -1,8 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:socia_media_app/components/drawer.dart';
+import 'package:socia_media_app/components/my_list_title.dart';
 import 'package:socia_media_app/components/text_field.dart';
 import 'package:socia_media_app/components/wall_post.dart';
+import 'package:socia_media_app/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,61 +15,82 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final currentUser = FirebaseAuth.instance.currentUser!; // Usuario actual
+  final currentUser = FirebaseAuth.instance.currentUser!; // Usuario actual autenticado
+  final textController = TextEditingController(); // Controlador de texto para el post
 
-  final textController = TextEditingController(); // Controlador de texto
-
+  // Método para cerrar sesión
   void signOut() {
-    FirebaseAuth.instance.signOut(); // Cerrar sesión
+    FirebaseAuth.instance.signOut();
   }
 
+  // Método para publicar un mensaje en Firestore
   void postMessage() {
-    // Publicar solo si hay texto
     if (textController.text.isNotEmpty) {
+      // Publicar el mensaje en la colección "User Posts" de Firestore
       FirebaseFirestore.instance.collection("User Posts").add({
         'Message': textController.text,
         'UserEmail': currentUser.email,
         'TimeStamp': Timestamp.now(),
         'Likes': [],
       });
-      textController.clear();
+      textController.clear(); // Limpiar el campo de texto después de publicar
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface, // Color de fondo de la pantalla
       appBar: AppBar(
-        title: const Text("The Wall"),
+        title: const Text("The Wall"), // Título de la app
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu), // Ícono de menú
+            onPressed: () {
+              Scaffold.of(context).openDrawer(); // Abrir el Drawer al hacer clic en el ícono
+            },
+          ),
+        ),
         actions: [
+          // Botón de cerrar sesión
           IconButton(
-            onPressed: signOut, // Botón de cerrar sesión
+            onPressed: signOut,
             icon: const Icon(Icons.logout),
-          )
+          ),
         ],
+      ),
+      drawer: MyDrawer(
+        onTapLogout: signOut, // Cerrar sesión desde el Drawer
+        onTapProfile: () {
+          // Navegar a la página de perfil
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ProfilePage()),
+          );
+        },
       ),
       body: Center(
         child: Column(
           children: [
+            // Lista de publicaciones
             Expanded(
               child: StreamBuilder(
                 stream: FirebaseFirestore.instance
-                    .collection("User Posts")
-                    .orderBy("TimeStamp", descending: false)
+                    .collection("User Posts") // Recolecta los posts
+                    .orderBy("TimeStamp", descending: false) // Ordenar por fecha
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
-                    final posts = snapshot.data!.docs;
+                    final posts = snapshot.data!.docs; // Obtiene los posts
                     return ListView.builder(
-                      itemCount: snapshot.data!.docs.length,
+                      itemCount: posts.length,
                       itemBuilder: (context, index) {
-                        final post = posts[index];
+                        final post = posts[index]; // Cada post
                         return WallPost(
                           message: post["Message"],
                           user: post["UserEmail"],
                           postId: post.id,
-                          likes: List<String>.from(post['Likes'] ?? []),
+                          likes: List<String>.from(post['Likes'] ?? []), // Obtiene los likes
                         );
                       },
                     );
@@ -76,7 +100,7 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
                   return const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(), // Indicador de carga
                   );
                 },
               ),
@@ -85,13 +109,15 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.all(25.0),
               child: Row(
                 children: [
+                  // Campo de texto para escribir un mensaje
                   Expanded(
                     child: MyTextField(
                       controller: textController,
                       hintText: "Write something on the wall...",
-                      obscureText: false,
+                      obscureText: false, // Campo de texto sin ocultar caracteres
                     ),
                   ),
+                  // Botón para publicar el mensaje
                   IconButton(
                     onPressed: postMessage,
                     icon: const Icon(Icons.arrow_circle_up),
@@ -99,14 +125,12 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
+            // Mostrar el email del usuario logueado
             Text(
               "Logged in as: " + currentUser.email!,
               style: TextStyle(color: Colors.grey),
-           ),
-
-            const SizedBox(
-              height: 50,
-              )
+            ),
+            const SizedBox(height: 50),
           ],
         ),
       ),
